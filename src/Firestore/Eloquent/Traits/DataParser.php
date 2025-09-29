@@ -6,6 +6,21 @@ use Roddy\FirestoreEloquent\Firestore\Eloquent\DataHelperController;
 
 trait DataParser
 {
+    /**
+     * Extract document ID from Firestore document name.
+     * Format: projects/{projectId}/databases/{databaseId}/documents/{document_path}
+     * Returns just the last segment which is the actual document ID.
+     */
+    private function extractDocumentName($firestoreDocumentName)
+    {
+        if (empty($firestoreDocumentName)) {
+            return null;
+        }
+        
+        $segments = explode('/', $firestoreDocumentName);
+        return end($segments);
+    }
+
     private function parseFirestoreJson($json)
     {
         $extractValue = function ($value) use (&$extractValue, &$parseFields) {
@@ -46,19 +61,23 @@ trait DataParser
         };
         if (isset($data['documents'])) {
             foreach ($data['documents'] as $doc) {
-                $data = $parseFields($doc['fields'], $extractValue);
+                $parsedData = $parseFields($doc['fields'], $extractValue);
                 if ($this->hidden) {
-                    $data = array_diff_key($data, array_flip($this->hidden));
+                    $parsedData = array_diff_key($parsedData, array_flip($this->hidden));
                 }
-                $result[] = new DataHelperController($data, $convertFunction, $this->primaryKey, $this->collection, $patchRequestFuntion, $deleteRequestFuntion, $this->modelClass);
+                // Extract the full document name (Firestore document ID)
+                $firestoreDocumentName = $doc['name'] ?? null;
+                $result[] = new DataHelperController($parsedData, $convertFunction, $this->primaryKey, $this->collection, $patchRequestFuntion, $deleteRequestFuntion, $this->modelClass, $firestoreDocumentName);
             }
         } elseif (isset($data[0]['document'])) {
             foreach ($data as $doc) {
-                $data = $parseFields($doc['document']['fields'], $extractValue);
+                $parsedData = $parseFields($doc['document']['fields'], $extractValue);
                 if ($this->hidden) {
-                    $data = array_diff_key($data, array_flip($this->hidden));
+                    $parsedData = array_diff_key($parsedData, array_flip($this->hidden));
                 }
-                $result[] = new DataHelperController($data, $convertFunction, $this->primaryKey, $this->collection, $patchRequestFuntion, $deleteRequestFuntion, $this->modelClass);
+                // Extract the full document name (Firestore document ID)
+                $firestoreDocumentName = $doc['document']['name'] ?? null;
+                $result[] = new DataHelperController($parsedData, $convertFunction, $this->primaryKey, $this->collection, $patchRequestFuntion, $deleteRequestFuntion, $this->modelClass, $firestoreDocumentName);
             }
         }
 

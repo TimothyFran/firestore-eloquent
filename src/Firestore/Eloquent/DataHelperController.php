@@ -9,7 +9,22 @@ use Illuminate\Support\Str;
 
 final class DataHelperController
 {
-    public function __construct(private $data, private $convertToFirestoreFormat, private $primaryKey, private $collection, private $patchRequest, private $deleteRequest, private $modelClass) {}
+    public function __construct(private $data, private $convertToFirestoreFormat, private $primaryKey, private $collection, private $patchRequest, private $deleteRequest, private $modelClass, private $firestoreDocumentName = null) {}
+
+    /**
+     * Extract document ID from Firestore document name.
+     * Format: projects/{projectId}/databases/{databaseId}/documents/{document_path}
+     * Returns just the last segment which is the actual document ID.
+     */
+    private function extractDocumentName($firestoreDocumentName)
+    {
+        if (empty($firestoreDocumentName)) {
+            return null;
+        }
+        
+        $segments = explode('/', $firestoreDocumentName);
+        return end($segments);
+    }
 
     public function __call($name, $arguments)
     {
@@ -95,6 +110,10 @@ final class DataHelperController
 
     public function __get($key)
     {
+        if ($key === 'firestoreDocumentName') {
+            return $this->extractDocumentName($this->firestoreDocumentName);
+        }
+        
         if (method_exists($this->modelClass, $key)) {
             $result = (new $this->modelClass)->$key();
             return $this->handleRelation($result, true);

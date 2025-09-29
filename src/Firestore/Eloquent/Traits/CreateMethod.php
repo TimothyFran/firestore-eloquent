@@ -58,7 +58,7 @@ trait CreateMethod
                     $id = str_replace('-', '', Str::uuid()) . str_replace('.', '', microtime(true));
                     $filteredData[$this->primaryKey] = $id;
                     $final = $this->convertToFirestoreFormat($filteredData);
-                    $this->postRequest($this->collection, $final, true, false, false, '?documentId=' . $id);
+                    $this->postRequest($this->collection, $final, true, false, false, '?DocumentName=' . $id);
                     return $filteredData;
                 }
             } else {
